@@ -14,6 +14,7 @@ This file tracks user requests and completed work going forward.
 - Fix cursor-to-screen attribution when multiple displays present.
 - Fix viewer stream-to-screen mapping when active screen changes.
 - Improve shared screen video quality.
+- Ignore `md.files` in git.
 
 ### Work Completed
 - Fixed cooldown boundary condition so the 500ms cooldown window is inclusive.
@@ -47,6 +48,7 @@ This file tracks user requests and completed work going forward.
   - Raised capture constraints to 4K and higher frame rate.
   - Applied sender bitrate/framerate parameters and `contentHint=detail`.
   - Set degradation preference to maintain resolution.
+- Added `.gitignore` entry for `md.files/`.
 
 ### Files Modified
 - `src/intent/focus-algorithm.ts`
@@ -62,6 +64,8 @@ This file tracks user requests and completed work going forward.
   - Treat pointer/hover as activity to avoid idle block.
   - Added mid-based mapping for reliable viewer switching.
   - Increased capture constraints and sender encoding parameters for quality.
+- `.gitignore`
+  - Ignore `md.files/`.
 - `src/main/index.ts`
   - Added `displayId` on display bounds for renderer mapping.
   - Added `get-cursor-display` IPC for robust cursor attribution.
