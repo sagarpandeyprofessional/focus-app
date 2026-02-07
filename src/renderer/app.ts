@@ -1036,7 +1036,10 @@ async function createPresenterPeer(viewerId: string): Promise<void> {
     return;
   }
 
-  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const pc = new RTCPeerConnection({
+    iceServers: ICE_SERVERS,
+    iceTransportPolicy: 'relay',
+  });
   attachPeerDebug(pc, `presenter->${viewerId}`);
   state.presenterPeers.set(viewerId, pc);
 
@@ -1125,6 +1128,7 @@ async function handleWebRTCOffer(payload: any, presenterId: string) {
 
   state.peerConnection = new RTCPeerConnection({
     iceServers: ICE_SERVERS,
+    iceTransportPolicy: 'relay',
   });
   attachPeerDebug(state.peerConnection, `viewer<- ${presenterId}`);
   state.viewerPeerTargetId = presenterId;
