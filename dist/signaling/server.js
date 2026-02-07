@@ -234,8 +234,8 @@ class SignalingServer {
         // Only presenter can emit focus events
         if (client.id !== session.presenterId)
             return;
-        // Cache focus state for late joiners
-        if (msg.type === focus_1.SignalingMessageType.FocusState || msg.type === focus_1.SignalingMessageType.FocusChange) {
+        // Cache focus state for late joiners (only valid snapshots)
+        if (msg.type === focus_1.SignalingMessageType.FocusState) {
             session.lastFocusState = msg.payload;
         }
         // Broadcast to all viewers
