@@ -62,6 +62,12 @@ const ICE_SERVERS: RTCIceServer[] = [
   },
 ];
 
+const STREAM_QUALITY = {
+  maxFrameRate: 60,
+  minFrameRate: 30,
+  maxBitrateKbps: 8000,
+};
+
 interface FocusChangeEvent {
   type: 'focus_change'; sessionId: string; screenId: ScreenId;
   reason: string; confidence: number; dwellMs: number;
@@ -575,9 +581,10 @@ async function startSharing() {
           mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: screen.sourceId,
-            maxWidth: 1920,
-            maxHeight: 1080,
-            maxFrameRate: 30,
+            maxWidth: 3840,
+            maxHeight: 2160,
+            maxFrameRate: STREAM_QUALITY.maxFrameRate,
+            minFrameRate: STREAM_QUALITY.minFrameRate,
           },
         } as any,
       });
@@ -1051,7 +1058,29 @@ async function createPresenterPeer(viewerId: string): Promise<void> {
   for (const [screenId, stream] of state.captures) {
     streamMeta.push({ streamId: stream.id, screenId });
     for (const track of stream.getTracks()) {
-      pc.addTrack(track, stream);
+      if (track.kind === 'video') {
+        try {
+          (track as any).contentHint = 'detail';
+        } catch {
+          // Non-fatal: contentHint not supported
+        }
+      }
+
+      const sender = pc.addTrack(track, stream);
+      if (track.kind === 'video' && sender?.setParameters) {
+        try {
+          const params = sender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          params.encodings[0].maxBitrate = STREAM_QUALITY.maxBitrateKbps * 1000;
+          params.encodings[0].maxFramerate = STREAM_QUALITY.maxFrameRate;
+          (params as any).degradationPreference = 'maintain-resolution';
+          await sender.setParameters(params);
+        } catch (err) {
+          console.warn('[App] Failed to set sender parameters:', err);
+        }
+      }
       trackMeta.push({ trackId: track.id, screenId });
       trackToScreen.set(track.id, screenId);
     }

@@ -35,6 +35,11 @@ declare enum ViewerMode {
     Pinned = "pinned"
 }
 declare const ICE_SERVERS: RTCIceServer[];
+declare const STREAM_QUALITY: {
+    maxFrameRate: number;
+    minFrameRate: number;
+    maxBitrateKbps: number;
+};
 interface FocusChangeEvent {
     type: 'focus_change';
     sessionId: string;

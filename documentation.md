@@ -13,6 +13,7 @@ This file tracks user requests and completed work going forward.
 - Fix cursor-driven switching not triggering with 3 screens.
 - Fix cursor-to-screen attribution when multiple displays present.
 - Fix viewer stream-to-screen mapping when active screen changes.
+- Improve shared screen video quality.
 
 ### Work Completed
 - Fixed cooldown boundary condition so the 500ms cooldown window is inclusive.
@@ -42,6 +43,10 @@ This file tracks user requests and completed work going forward.
   - Presenter sends `{ mid, screenId }` mapping with the SDP offer.
   - Viewer uses `event.transceiver.mid` to select the correct stream for a screen.
   - Kept stream/track mapping as fallback.
+- Increased capture and encoder quality settings.
+  - Raised capture constraints to 4K and higher frame rate.
+  - Applied sender bitrate/framerate parameters and `contentHint=detail`.
+  - Set degradation preference to maintain resolution.
 
 ### Files Modified
 - `src/intent/focus-algorithm.ts`
@@ -56,6 +61,7 @@ This file tracks user requests and completed work going forward.
   - Added hover signal generation and cursor-based thresholds for switching.
   - Treat pointer/hover as activity to avoid idle block.
   - Added mid-based mapping for reliable viewer switching.
+  - Increased capture constraints and sender encoding parameters for quality.
 - `src/main/index.ts`
   - Added `displayId` on display bounds for renderer mapping.
   - Added `get-cursor-display` IPC for robust cursor attribution.
