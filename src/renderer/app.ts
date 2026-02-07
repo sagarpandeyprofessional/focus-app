@@ -47,18 +47,18 @@ const ICE_SERVERS: RTCIceServer[] = [
   // ── Replace these with your real TURN credentials ──
   {
     urls: 'turn:a.relay.metered.ca:80',
-    username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
-    credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    username: '5f37816020493775bc021c24',
+    credential: '796CHnBB4ZtPm/Uc',
   },
   {
     urls: 'turn:a.relay.metered.ca:443',
-    username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
-    credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    username: '5f37816020493775bc021c24',
+    credential: '796CHnBB4ZtPm/Uc',
   },
   {
     urls: 'turns:a.relay.metered.ca:443',
-    username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
-    credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    username: '5f37816020493775bc021c24',
+    credential: '796CHnBB4ZtPm/Uc',
   },
 ];
 

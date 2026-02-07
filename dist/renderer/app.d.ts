@@ -179,6 +179,7 @@ declare function handleWebRTCOffer(payload: any, presenterId: string): Promise<v
 declare function handleWebRTCAnswer(payload: any, viewerId: string): Promise<void>;
 declare function handleICECandidate(payload: any, senderId: string): Promise<void>;
 declare function updateConnectionStatus(status: 'connected' | 'connecting' | 'offline'): void;
+declare function attachPeerDebug(pc: RTCPeerConnection, label: string): void;
 declare function resetToLanding(): void;
 declare function copyToClipboard(text: string): void;
 //# sourceMappingURL=app.d.ts.map

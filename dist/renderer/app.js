@@ -901,6 +901,7 @@ async function createPresenterPeer(viewerId) {
         return;
     }
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    attachPeerDebug(pc, `presenter->${viewerId}`);
     state.presenterPeers.set(viewerId, pc);
     pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -981,6 +982,7 @@ async function handleWebRTCOffer(payload, presenterId) {
     state.peerConnection = new RTCPeerConnection({
         iceServers: ICE_SERVERS,
     });
+    attachPeerDebug(state.peerConnection, `viewer<- ${presenterId}`);
     state.viewerPeerTargetId = presenterId;
     state.viewerTrackMap.clear();
     state.viewerTrackStreams.clear();
@@ -1010,6 +1012,12 @@ async function handleWebRTCOffer(payload, presenterId) {
         });
     }
     state.peerConnection.ontrack = (event) => {
+        console.log('[WebRTC] viewer ontrack', {
+            trackId: event.track?.id,
+            kind: event.track?.kind,
+            streams: event.streams?.map(s => s.id),
+            mid: event.transceiver?.mid,
+        });
         const track = event.track;
         const stream = event.streams[0] ?? new MediaStream([track]);
         if (stream?.id) {
@@ -1090,6 +1098,20 @@ function updateConnectionStatus(status) {
         if (text)
             text.textContent = 'Connected';
     }
+}
+function attachPeerDebug(pc, label) {
+    pc.onicegatheringstatechange = () => {
+        console.log(`[WebRTC] ${label} iceGatheringState`, pc.iceGatheringState);
+    };
+    pc.oniceconnectionstatechange = () => {
+        console.log(`[WebRTC] ${label} iceConnectionState`, pc.iceConnectionState);
+    };
+    pc.onconnectionstatechange = () => {
+        console.log(`[WebRTC] ${label} connectionState`, pc.connectionState);
+    };
+    pc.onsignalingstatechange = () => {
+        console.log(`[WebRTC] ${label} signalingState`, pc.signalingState);
+    };
 }
 function resetToLanding() {
     // Cleanup
