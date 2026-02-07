@@ -18,6 +18,13 @@ const DEFAULT_CLIENT_CONFIG = {
     reconnectIntervalMs: 2000,
     maxReconnectAttempts: 10,
 };
+const normalizeWsUrl = (input) => {
+    const trimmed = input.trim();
+    if (/^wss?:\/\//i.test(trimmed)) {
+        return trimmed;
+    }
+    return `ws://${trimmed}`;
+};
 // ─────────────────────────────────────────────
 // Signaling Client
 // ─────────────────────────────────────────────
@@ -36,7 +43,7 @@ class SignalingClient extends events_1.EventEmitter {
     // ─── Connection Lifecycle ────────────────
     connect() {
         try {
-            this.ws = new WebSocket(this.config.serverUrl);
+            this.ws = new WebSocket(normalizeWsUrl(this.config.serverUrl));
             this.ws.onopen = () => {
                 this.connected = true;
                 this.reconnectAttempts = 0;
