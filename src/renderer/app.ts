@@ -627,6 +627,8 @@ function onSessionCreated() {
   showView('presenter');
   renderPresenterView();
   startIntentDetection();
+  const snapshot = state.focusEngine?.getState();
+  if (snapshot) sendSignaling('focus_state', snapshot);
 }
 
 function renderPresenterView() {
@@ -746,6 +748,8 @@ function onPresenterFocusChange(event: FocusChangeEvent) {
 
   // Send to viewers via signaling
   sendSignaling('focus_change', event);
+  const snapshot = state.focusEngine?.getState();
+  if (snapshot) sendSignaling('focus_state', snapshot);
 }
 
 function updatePresenterActiveScreen(screenId: ScreenId) {
@@ -859,13 +863,15 @@ function onViewerFocusChange(event: FocusChangeEvent) {
 }
 
 function onViewerFocusState(snapshot: FocusStateSnapshot) {
-  state.viewerActiveScreen = snapshot.activeScreenId;
-  updateViewerMainCanvas(snapshot.activeScreenId);
-  updateViewerScreenMap(snapshot.activeScreenId);
+  const screenId = snapshot?.activeScreenId ?? (snapshot as any)?.screenId ?? null;
+  if (!screenId) return;
+  state.viewerActiveScreen = screenId;
+  updateViewerMainCanvas(screenId);
+  updateViewerScreenMap(screenId);
 
   const label = $('#viewer-active-screen-label');
   if (label) {
-    const screenNum = snapshot.activeScreenId.replace('screen_', '');
+    const screenNum = screenId.replace('screen_', '');
     label.textContent = `Screen ${screenNum}`;
   }
 }
