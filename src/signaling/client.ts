@@ -31,6 +31,17 @@ const DEFAULT_CLIENT_CONFIG: SignalingClientConfig = {
   maxReconnectAttempts: 10,
 };
 
+const normalizeWsUrl = (input: string): string => {
+  const trimmed = input.trim();
+  if (/^wss?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^localhost$/i.test(trimmed)) {
+    return `ws://${trimmed}:8080`;
+  }
+  return `ws://${trimmed}`;
+};
+
 // ─────────────────────────────────────────────
 // Signaling Client
 // ─────────────────────────────────────────────
@@ -53,7 +64,7 @@ export class SignalingClient extends EventEmitter {
 
   connect(): void {
     try {
-      this.ws = new WebSocket(this.config.serverUrl);
+      this.ws = new WebSocket(normalizeWsUrl(this.config.serverUrl));
 
       this.ws.onopen = () => {
         this.connected = true;
