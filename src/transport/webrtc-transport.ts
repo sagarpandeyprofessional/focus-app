@@ -42,6 +42,24 @@ const DEFAULT_TRANSPORT_CONFIG: WebRTCTransportConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    // TURN relay — required when both peers are behind symmetric NAT.
+    // Replace with your own TURN credentials (Metered.ca free tier, Twilio, or self-hosted coturn).
+    // Without TURN, cross-network connections fail ~30-40% of the time.
+    {
+      urls: 'turn:a.relay.metered.ca:80',
+      username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+      credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    },
+    {
+      urls: 'turn:a.relay.metered.ca:443',
+      username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+      credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    },
+    {
+      urls: 'turns:a.relay.metered.ca:443',
+      username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+      credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    },
   ],
   useDataChannel: true,
   enableSimulcast: true,

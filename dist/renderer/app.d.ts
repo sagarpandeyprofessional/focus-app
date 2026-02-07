@@ -34,6 +34,7 @@ declare enum ViewerMode {
     AutoFollow = "auto_follow",
     Pinned = "pinned"
 }
+declare const ICE_SERVERS: RTCIceServer[];
 interface FocusChangeEvent {
     type: 'focus_change';
     sessionId: string;
@@ -105,6 +106,7 @@ interface AppState {
     role: 'none' | 'presenter' | 'viewer';
     sessionId: string | null;
     clientId: string | null;
+    serverUrl: string;
     selectedScreens: Array<{
         screenId: ScreenId;
         sourceId: string;
@@ -126,6 +128,8 @@ declare const state: AppState;
 declare const $: (sel: string) => HTMLElement;
 declare const $$: (sel: string) => NodeListOf<Element>;
 declare function showView(viewName: string): void;
+/** Read server URL from UI input and normalize it */
+declare function getServerUrl(): string;
 declare function connectSignaling(url?: string): Promise<void>;
 declare function sendSignaling(type: string, payload?: any): void;
 declare function handleSignalingMessage(msg: any): void;

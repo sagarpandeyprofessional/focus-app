@@ -38,6 +38,32 @@ var ViewerMode;
     ViewerMode["Pinned"] = "pinned";
 })(ViewerMode || (ViewerMode = {}));
 // ═══════════════════════════════════════════
+// ICE SERVERS (STUN + TURN)
+// ═══════════════════════════════════════════
+// TURN is required when peers are on different networks (different NATs).
+// Get free TURN credentials at https://www.metered.ca/stun-turn
+// or self-host coturn.
+const ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    // ── Replace these with your real TURN credentials ──
+    {
+        urls: 'turn:a.relay.metered.ca:80',
+        username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+        credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    },
+    {
+        urls: 'turn:a.relay.metered.ca:443',
+        username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+        credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    },
+    {
+        urls: 'turns:a.relay.metered.ca:443',
+        username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+        credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+    },
+];
+// ═══════════════════════════════════════════
 // FOCUS ALGORITHM (inline for renderer)
 // ═══════════════════════════════════════════
 const BASE_CONFIDENCE = {
@@ -184,6 +210,7 @@ const state = {
     role: 'none',
     sessionId: null,
     clientId: null,
+    serverUrl: 'ws://localhost:8080',
     selectedScreens: [],
     captures: new Map(),
     focusEngine: null,
@@ -212,10 +239,28 @@ function showView(viewName) {
 // ═══════════════════════════════════════════
 // SIGNALING
 // ═══════════════════════════════════════════
-function connectSignaling(url = 'ws://localhost:8080') {
+/** Read server URL from UI input and normalize it */
+function getServerUrl() {
+    const input = $('#input-server-url');
+    let url = input?.value.trim() || 'ws://localhost:8080';
+    // Auto-prefix ws:// if user typed just an IP/hostname
+    if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+        url = 'ws://' + url;
+    }
+    // Auto-append default port if missing
+    const parsed = new URL(url);
+    if (!parsed.port) {
+        url = `${parsed.protocol}//${parsed.hostname}:8080`;
+    }
+    state.serverUrl = url;
+    return url;
+}
+function connectSignaling(url) {
+    const serverUrl = url || state.serverUrl;
     return new Promise((resolve, reject) => {
         try {
-            state.ws = new WebSocket(url);
+            console.log(`[App] Connecting to signaling server: ${serverUrl}`);
+            state.ws = new WebSocket(serverUrl);
             state.ws.onopen = () => {
                 updateConnectionStatus('connected');
                 resolve();
@@ -424,6 +469,7 @@ async function startSharing() {
     });
     // Connect signaling and create session
     try {
+        getServerUrl(); // Read from UI input
         await connectSignaling();
         sendSignaling('create_session');
     }
@@ -584,6 +630,7 @@ async function joinAsViewer(sessionId) {
     state.role = 'viewer';
     state.sessionId = sessionId;
     try {
+        getServerUrl(); // Read from UI input
         await connectSignaling();
         sendSignaling('join_session');
     }
@@ -728,7 +775,7 @@ async function handleWebRTCOffer(payload) {
     if (state.role !== 'viewer' || !payload?.offer)
         return;
     const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        iceServers: ICE_SERVERS,
     });
     state.peerConnection = pc;
     pc.ontrack = (event) => {

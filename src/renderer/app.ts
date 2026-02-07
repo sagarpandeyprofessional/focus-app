@@ -34,6 +34,34 @@ enum PresenterControlAction {
 
 enum ViewerMode { AutoFollow = 'auto_follow', Pinned = 'pinned' }
 
+// ═══════════════════════════════════════════
+// ICE SERVERS (STUN + TURN)
+// ═══════════════════════════════════════════
+// TURN is required when peers are on different networks (different NATs).
+// Get free TURN credentials at https://www.metered.ca/stun-turn
+// or self-host coturn.
+
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  // ── Replace these with your real TURN credentials ──
+  {
+    urls: 'turn:a.relay.metered.ca:80',
+    username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+    credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+  },
+  {
+    urls: 'turn:a.relay.metered.ca:443',
+    username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+    credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+  },
+  {
+    urls: 'turns:a.relay.metered.ca:443',
+    username: 'REPLACE_WITH_YOUR_METERED_USERNAME',
+    credential: 'REPLACE_WITH_YOUR_METERED_CREDENTIAL',
+  },
+];
+
 interface FocusChangeEvent {
   type: 'focus_change'; sessionId: string; screenId: ScreenId;
   reason: string; confidence: number; dwellMs: number;
@@ -208,6 +236,7 @@ interface AppState {
   role: 'none' | 'presenter' | 'viewer';
   sessionId: string | null;
   clientId: string | null;
+  serverUrl: string;
   selectedScreens: Array<{ screenId: ScreenId; sourceId: string; label: string; bounds: any }>;
   captures: Map<ScreenId, MediaStream>;
   focusEngine: FocusEngine | null;
@@ -226,6 +255,7 @@ const state: AppState = {
   role: 'none',
   sessionId: null,
   clientId: null,
+  serverUrl: 'ws://localhost:8080',
   selectedScreens: [],
   captures: new Map(),
   focusEngine: null,
@@ -260,10 +290,31 @@ function showView(viewName: string) {
 // SIGNALING
 // ═══════════════════════════════════════════
 
-function connectSignaling(url: string = 'ws://localhost:8080'): Promise<void> {
+/** Read server URL from UI input and normalize it */
+function getServerUrl(): string {
+  const input = $('#input-server-url') as HTMLInputElement;
+  let url = input?.value.trim() || 'ws://localhost:8080';
+
+  // Auto-prefix ws:// if user typed just an IP/hostname
+  if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+    url = 'ws://' + url;
+  }
+  // Auto-append default port if missing
+  const parsed = new URL(url);
+  if (!parsed.port) {
+    url = `${parsed.protocol}//${parsed.hostname}:8080`;
+  }
+
+  state.serverUrl = url;
+  return url;
+}
+
+function connectSignaling(url?: string): Promise<void> {
+  const serverUrl = url || state.serverUrl;
   return new Promise((resolve, reject) => {
     try {
-      state.ws = new WebSocket(url);
+      console.log(`[App] Connecting to signaling server: ${serverUrl}`);
+      state.ws = new WebSocket(serverUrl);
 
       state.ws.onopen = () => {
         updateConnectionStatus('connected');
@@ -500,6 +551,7 @@ async function startSharing() {
 
   // Connect signaling and create session
   try {
+    getServerUrl(); // Read from UI input
     await connectSignaling();
     sendSignaling('create_session');
   } catch (err) {
@@ -682,6 +734,7 @@ async function joinAsViewer(sessionId: string) {
   state.sessionId = sessionId;
 
   try {
+    getServerUrl(); // Read from UI input
     await connectSignaling();
     sendSignaling('join_session');
   } catch (err) {
@@ -845,7 +898,7 @@ async function handleWebRTCOffer(payload: any) {
   if (state.role !== 'viewer' || !payload?.offer) return;
 
   const pc = new RTCPeerConnection({
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    iceServers: ICE_SERVERS,
   });
 
   state.peerConnection = pc;

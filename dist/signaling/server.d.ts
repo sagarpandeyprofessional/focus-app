@@ -15,7 +15,8 @@ export declare class SignalingServer {
     private clients;
     private sessions;
     private port;
-    constructor(port?: number);
+    private host;
+    constructor(port?: number, host?: string);
     start(): void;
     stop(): void;
     private handleMessage;

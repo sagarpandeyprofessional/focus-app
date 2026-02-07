@@ -41,6 +41,24 @@
         </div>
 
         <div class="landing-actions">
+          <!-- Server Connection -->
+          <div class="server-group">
+            <label class="input-label" for="input-server-url">Signal Server</label>
+            <input
+              id="input-server-url"
+              type="text"
+              class="input input-mono"
+              placeholder="ws://your-server-ip:8080"
+              value="ws://localhost:8080"
+              spellcheck="false"
+              autocomplete="off"
+            >
+            <p class="input-hint">
+              Both presenter and viewer must use the same server address.
+              For remote access, use your public IP or a tunnel (ngrok / Cloudflare).
+            </p>
+          </div>
+
           <button id="btn-present" class="btn btn-primary btn-large">
             <span class="btn-icon">🖥</span>
             Start Presenting

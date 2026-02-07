@@ -48,15 +48,17 @@ export class SignalingServer {
   private clients: Map<string, ConnectedClient> = new Map();
   private sessions: Map<string, ManagedSession> = new Map();
   private port: number;
+  private host: string;
 
-  constructor(port: number = 8080) {
+  constructor(port: number = 8080, host: string = '0.0.0.0') {
     this.port = port;
+    this.host = host;
   }
 
   // ─── Lifecycle ───────────────────────────
 
   start(): void {
-    this.wss = new WebSocket.Server({ port: this.port });
+    this.wss = new WebSocket.Server({ port: this.port, host: this.host });
 
     this.wss.on('connection', (ws: WebSocket) => {
       const clientId = uuidv4();
@@ -99,7 +101,7 @@ export class SignalingServer {
       console.log(`[Signaling] Client connected: ${clientId}`);
     });
 
-    console.log(`[Signaling] Server started on port ${this.port}`);
+    console.log(`[Signaling] Server started on ${this.host}:${this.port}`);
   }
 
   stop(): void {
@@ -414,8 +416,12 @@ export class SignalingServer {
 
 if (require.main === module) {
   const port = parseInt(process.env.SIGNAL_PORT || '8080', 10);
-  const server = new SignalingServer(port);
+  const host = process.env.SIGNAL_HOST || '0.0.0.0';
+  const server = new SignalingServer(port, host);
   server.start();
+
+  console.log(`[Signaling] Tip: Clients connect via ws://<YOUR_PUBLIC_IP>:${port}`);
+  console.log(`[Signaling] For remote access: use ngrok, Cloudflare Tunnel, or deploy to a VPS.`);
 
   process.on('SIGINT', () => {
     server.stop();
