@@ -323,14 +323,12 @@ function getServerUrl(): string {
   const input = $('#input-server-url') as HTMLInputElement;
   let url = input?.value.trim() || 'ws://localhost:8080';
 
-  // Auto-prefix ws:// if user typed just an IP/hostname
-  if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
-    url = 'ws://' + url;
-  }
-  // Auto-append default port if missing
-  const parsed = new URL(url);
-  if (!parsed.port) {
-    url = `${parsed.protocol}//${parsed.hostname}:8080`;
+  if (!/^wss?:\/\//i.test(url)) {
+    if (/^localhost$/i.test(url)) {
+      url = `ws://${url}:8080`;
+    } else {
+      url = `ws://${url}`;
+    }
   }
 
   state.serverUrl = url;

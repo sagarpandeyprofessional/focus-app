@@ -23,6 +23,9 @@ const normalizeWsUrl = (input) => {
     if (/^wss?:\/\//i.test(trimmed)) {
         return trimmed;
     }
+    if (/^localhost$/i.test(trimmed)) {
+        return `ws://${trimmed}:8080`;
+    }
     return `ws://${trimmed}`;
 };
 // ─────────────────────────────────────────────
