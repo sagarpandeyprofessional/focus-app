@@ -15,6 +15,7 @@ export type ScreenId = string;
 /** Physical display geometry in unified coordinate space */
 export interface DisplayBounds {
     readonly screenId: ScreenId;
+    readonly displayId?: string;
     readonly x: number;
     readonly y: number;
     readonly width: number;

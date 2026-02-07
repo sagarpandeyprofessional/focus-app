@@ -98,7 +98,7 @@ class FocusAlgorithm {
             return;
         }
         // §8.2: Cooldown penalty
-        if (now - this.state.lastSwitchTs < this.config.cooldownMs &&
+        if (now - this.state.lastSwitchTs <= this.config.cooldownMs &&
             signal.type !== focus_1.SignalType.Manual) {
             confidence -= 0.15;
             if (confidence < 0)
@@ -246,7 +246,7 @@ class FocusAlgorithm {
         }
         // §7.2: -0.15 if candidate differs from active and within cooldown
         if (candidateScreen !== this.state.activeScreenId &&
-            now - this.state.lastSwitchTs < this.config.cooldownMs) {
+            now - this.state.lastSwitchTs <= this.config.cooldownMs) {
             conf -= 0.15;
         }
         // Clamp to [0, 1]

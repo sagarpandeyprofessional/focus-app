@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDisplays: () => ipcRenderer.invoke('get-displays'),
   getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources'),
   getCursorPosition: () => ipcRenderer.invoke('get-cursor-position'),
+  getCursorDisplay: () => ipcRenderer.invoke('get-cursor-display'),
   getFocusedWindowDisplay: () => ipcRenderer.invoke('get-focused-window-display'),
   checkScreenPermission: () => ipcRenderer.invoke('check-screen-permission'),
   requestScreenPermission: () => ipcRenderer.invoke('request-screen-permission'),
@@ -38,6 +39,7 @@ declare global {
       getDisplays: () => Promise<any[]>;
       getDesktopSources: () => Promise<any[]>;
       getCursorPosition: () => Promise<{ x: number; y: number }>;
+      getCursorDisplay: () => Promise<string>;
       getFocusedWindowDisplay: () => Promise<string | null>;
       checkScreenPermission: () => Promise<boolean>;
       requestScreenPermission: () => Promise<boolean>;

@@ -125,7 +125,8 @@ class FocusEngine {
   isAutoEnabled(): boolean { return this.autoEnabled; }
 
   processSignal(type: string, screenId: ScreenId, now: number, speedPxPerS?: number) {
-    if (type !== 'pointer_move' && type !== 'hover') this.lastActivityTs = now;
+    // In renderer we only emit pointer/hover signals, so treat them as activity.
+    this.lastActivityTs = now;
     if (this.frozen || !this.autoEnabled) return;
     if (this.manualOverride) {
       if (this.activeScreenId !== this.manualOverride) {
@@ -164,7 +165,12 @@ class FocusEngine {
 
     // Hysteresis
     if (screenId !== this.activeScreenId) {
-      if (conf >= DEFAULT_CONFIG.switchThreshold) {
+      const threshold = type === 'hover'
+        ? 0.70
+        : type === 'pointer_move'
+          ? 0.40
+          : DEFAULT_CONFIG.switchThreshold;
+      if (conf >= threshold) {
         this.setActive(screenId, type, conf, now);
       }
     }
@@ -237,7 +243,7 @@ interface AppState {
   sessionId: string | null;
   clientId: string | null;
   serverUrl: string;
-  selectedScreens: Array<{ screenId: ScreenId; sourceId: string; label: string; bounds: any }>;
+  selectedScreens: Array<{ screenId: ScreenId; sourceId: string; label: string; bounds: any; displayId?: string }>;
   captures: Map<ScreenId, MediaStream>;
   focusEngine: FocusEngine | null;
   viewerMode: ViewerMode;
@@ -246,6 +252,14 @@ interface AppState {
   viewerCount: number;
   ws: WebSocket | null;
   peerConnection: RTCPeerConnection | null;
+  presenterPeers: Map<string, RTCPeerConnection>;
+  viewerTrackMap: Map<string, ScreenId>;
+  viewerTrackStreams: Map<string, MediaStream>;
+  viewerStreamMap: Map<string, ScreenId>;
+  viewerStreamById: Map<string, MediaStream>;
+  viewerScreenStreams: Map<ScreenId, MediaStream>;
+  viewerMidMap: Map<string, ScreenId>;
+  viewerPeerTargetId: string | null;
   intentPollTimer: number | null;
   pipTimer: number | null;
 }
@@ -265,6 +279,14 @@ const state: AppState = {
   viewerCount: 0,
   ws: null,
   peerConnection: null,
+  presenterPeers: new Map(),
+  viewerTrackMap: new Map(),
+  viewerTrackStreams: new Map(),
+  viewerStreamMap: new Map(),
+  viewerStreamById: new Map(),
+  viewerScreenStreams: new Map(),
+  viewerMidMap: new Map(),
+  viewerPeerTargetId: null,
   intentPollTimer: null,
   pipTimer: null,
 };
@@ -387,6 +409,9 @@ function handleSignalingMessage(msg: any) {
       if (state.role === 'presenter') {
         state.viewerCount++;
         updateViewerCount();
+        if (msg.payload?.viewerId) {
+          void createPresenterPeer(msg.payload.viewerId);
+        }
       }
       break;
 
@@ -394,6 +419,11 @@ function handleSignalingMessage(msg: any) {
       if (state.role === 'presenter' && msg.payload?.viewerId) {
         state.viewerCount = Math.max(0, state.viewerCount - 1);
         updateViewerCount();
+        const pc = state.presenterPeers.get(msg.payload.viewerId);
+        if (pc) {
+          pc.close();
+          state.presenterPeers.delete(msg.payload.viewerId);
+        }
       }
       if (msg.payload?.reason === 'presenter_left' && state.role === 'viewer') {
         alert('Presenter ended the session.');
@@ -402,21 +432,36 @@ function handleSignalingMessage(msg: any) {
       break;
 
     case 'offer':
-      handleWebRTCOffer(msg.payload);
+      if (isMessageForThisClient(msg.payload)) {
+        handleWebRTCOffer(msg.payload, msg.senderId);
+      }
       break;
 
     case 'answer':
-      handleWebRTCAnswer(msg.payload);
+      if (isMessageForThisClient(msg.payload)) {
+        handleWebRTCAnswer(msg.payload, msg.senderId);
+      }
       break;
 
     case 'ice_candidate':
-      handleICECandidate(msg.payload);
+      if (isMessageForThisClient(msg.payload)) {
+        handleICECandidate(msg.payload, msg.senderId);
+      }
       break;
 
     case 'screen_meta_update':
-      if (state.role === 'viewer') onScreenMetaUpdate(msg.payload);
+      if (state.role === 'viewer' && isMessageForThisClient(msg.payload)) {
+        onScreenMetaUpdate(msg.payload);
+      }
       break;
   }
+}
+
+function isMessageForThisClient(payload: any): boolean {
+  const targetId = payload?.targetId;
+  if (!targetId) return true;
+  if (!state.clientId) return false;
+  return targetId === state.clientId;
 }
 
 // ═══════════════════════════════════════════
@@ -435,16 +480,26 @@ async function populateScreenSelection() {
   try {
     const sources = await window.electronAPI.getDesktopSources();
     const displays = await window.electronAPI.getDisplays();
+    const displayById = new Map<string, any>();
+    displays.forEach((display: any) => {
+      if (display?.displayId !== undefined && display?.displayId !== null) {
+        displayById.set(String(display.displayId), display);
+      }
+    });
 
     sources.forEach((source: any, index: number) => {
-      const display = displays[index] || { width: 1920, height: 1080 };
-      const screenId = `screen_${index + 1}`;
+      const displayFromId = displayById.get(String(source.display_id || ''));
+      const display = displayFromId || displays[index] || { width: 1920, height: 1080 };
+      const screenId = display?.screenId || `screen_${index + 1}`;
 
       const card = document.createElement('div');
       card.className = 'screen-card';
       card.dataset.screenId = screenId;
       card.dataset.sourceId = source.id;
       card.dataset.label = source.name;
+      if (display?.displayId !== undefined && display?.displayId !== null) {
+        card.dataset.displayId = String(display.displayId);
+      }
       card.dataset.boundsX = String(display.x || 0);
       card.dataset.boundsY = String(display.y || 0);
       card.dataset.boundsW = String(display.width || 1920);
@@ -499,6 +554,7 @@ async function startSharing() {
       screenId: card.dataset.screenId,
       sourceId: card.dataset.sourceId,
       label: card.dataset.label,
+      displayId: card.dataset.displayId || undefined,
       bounds: {
         screenId: card.dataset.screenId,
         x: parseInt(card.dataset.boundsX),
@@ -631,6 +687,7 @@ function startIntentDetection() {
 
     try {
       const pos = await window.electronAPI.getCursorPosition();
+      const displayId = await window.electronAPI.getCursorDisplay();
       const now = Date.now();
       const dx = pos.x - lastX;
       const dy = pos.y - lastY;
@@ -639,9 +696,13 @@ function startIntentDetection() {
       const speed = dt > 0 ? (dist / dt) * 1000 : 0;
 
       // Attribute to screen
-      const screenId = attributeCursorToScreen(pos.x, pos.y);
-      if (screenId && dist > 3) {
-        state.focusEngine.processSignal('pointer_move', screenId, now, speed);
+      const screenId = attributeCursorToScreen(pos.x, pos.y, displayId);
+      if (screenId) {
+        if (dist > 3) {
+          state.focusEngine.processSignal('pointer_move', screenId, now, speed);
+        } else if (dist <= DEFAULT_CONFIG.hoverRadiusPx) {
+          state.focusEngine.processSignal('hover', screenId, now, 0);
+        }
       }
 
       lastX = pos.x;
@@ -659,7 +720,12 @@ function startIntentDetection() {
   });
 }
 
-function attributeCursorToScreen(x: number, y: number): ScreenId | null {
+function attributeCursorToScreen(x: number, y: number, displayId?: string | null): ScreenId | null {
+  if (displayId) {
+    const match = state.selectedScreens.find(s => s.displayId === String(displayId));
+    if (match) return match.screenId;
+  }
+
   for (const screen of state.selectedScreens) {
     const b = screen.bounds;
     if (x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height) {
@@ -799,15 +865,38 @@ function onViewerFocusState(snapshot: FocusStateSnapshot) {
   }
 }
 
-function updateViewerMainCanvas(_screenId: ScreenId) {
-  // In full implementation: switch which video track feeds the main <video> element.
-  // This is a UI-only change — no WebRTC renegotiation per spec.
-  // The viewer has all tracks subscribed; we just change which one renders to main.
+function updateViewerMainCanvas(screenId: ScreenId | null) {
+  const video = $('#viewer-main-video') as HTMLVideoElement;
+  if (!video) return;
+
+  let stream: MediaStream | undefined;
+
+  if (screenId) {
+    stream = state.viewerScreenStreams.get(screenId);
+  }
+
+  if (!stream) {
+    const firstScreenStream = state.viewerScreenStreams.values().next().value as MediaStream | undefined;
+    const firstTrackStream = state.viewerTrackStreams.values().next().value as MediaStream | undefined;
+    stream = firstScreenStream || firstTrackStream;
+  }
+
+  if (stream && video.srcObject !== stream) {
+    video.srcObject = stream;
+    void video.play().catch(() => undefined);
+  }
 }
 
-function showViewerPiP(_previousScreenId: ScreenId) {
+function showViewerPiP(previousScreenId: ScreenId) {
   const pip = $('#viewer-pip');
-  if (!pip) return;
+  const video = $('#viewer-pip-video') as HTMLVideoElement;
+  const stream = state.viewerScreenStreams.get(previousScreenId);
+  if (!pip || !video || !stream) return;
+
+  if (video.srcObject !== stream) {
+    video.srcObject = stream;
+    void video.play().catch(() => undefined);
+  }
 
   pip.style.display = 'block';
 
@@ -885,54 +974,223 @@ function updateViewerModeIndicator() {
   }
 }
 
-function onScreenMetaUpdate(_meta: any) {
-  // Update screen map with new metadata
+function onScreenMetaUpdate(meta: any) {
+  const tracks = Array.isArray(meta?.tracks) ? meta.tracks : [];
+  const streams = Array.isArray(meta?.streams) ? meta.streams : [];
+  const mids = Array.isArray(meta?.mids) ? meta.mids : [];
+
+  tracks.forEach((t: any) => {
+    if (!t?.trackId || !t?.screenId) return;
+    state.viewerTrackMap.set(t.trackId, t.screenId);
+
+    const existingStream = state.viewerTrackStreams.get(t.trackId);
+    if (existingStream) {
+      state.viewerScreenStreams.set(t.screenId, existingStream);
+    }
+  });
+
+  streams.forEach((s: any) => {
+    if (!s?.streamId || !s?.screenId) return;
+    state.viewerStreamMap.set(s.streamId, s.screenId);
+
+    const existingStream = state.viewerStreamById.get(s.streamId);
+    if (existingStream) {
+      state.viewerScreenStreams.set(s.screenId, existingStream);
+    }
+  });
+
+  mids.forEach((m: any) => {
+    if (!m?.mid || !m?.screenId) return;
+    state.viewerMidMap.set(String(m.mid), m.screenId);
+  });
+
+  if (!state.viewerActiveScreen) {
+    const initialScreenId = streams[0]?.screenId ?? tracks[0]?.screenId;
+    if (initialScreenId) {
+      state.viewerActiveScreen = initialScreenId;
+    }
+  }
+
+  updateViewerMainCanvas(state.viewerActiveScreen);
 }
 
 // ═══════════════════════════════════════════
 // WEBRTC HANDLERS
 // ═══════════════════════════════════════════
 
-async function handleWebRTCOffer(payload: any) {
-  // Viewer: receive offer, create answer
-  if (state.role !== 'viewer' || !payload?.offer) return;
+async function createPresenterPeer(viewerId: string): Promise<void> {
+  if (state.presenterPeers.has(viewerId)) return;
+  if (state.captures.size === 0) {
+    console.warn('[App] No captures available for WebRTC offer.');
+    return;
+  }
 
-  const pc = new RTCPeerConnection({
-    iceServers: ICE_SERVERS,
-  });
-
-  state.peerConnection = pc;
-
-  pc.ontrack = (event) => {
-    // Attach received tracks to video elements
-    const video = $('#viewer-main-video') as HTMLVideoElement;
-    if (video && event.streams[0]) {
-      video.srcObject = event.streams[0];
-    }
-  };
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  state.presenterPeers.set(viewerId, pc);
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
-      sendSignaling('ice_candidate', { candidate: event.candidate.toJSON() });
+      sendSignaling('ice_candidate', {
+        candidate: event.candidate.toJSON(),
+        targetId: viewerId,
+      });
     }
   };
 
-  await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  sendSignaling('answer', { answer });
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      pc.close();
+      state.presenterPeers.delete(viewerId);
+    }
+  };
+
+  const trackMeta: Array<{ trackId: string; screenId: ScreenId }> = [];
+  const streamMeta: Array<{ streamId: string; screenId: ScreenId }> = [];
+  const trackToScreen = new Map<string, ScreenId>();
+
+  for (const [screenId, stream] of state.captures) {
+    streamMeta.push({ streamId: stream.id, screenId });
+    for (const track of stream.getTracks()) {
+      pc.addTrack(track, stream);
+      trackMeta.push({ trackId: track.id, screenId });
+      trackToScreen.set(track.id, screenId);
+    }
+  }
+
+  if (trackMeta.length > 0 || streamMeta.length > 0) {
+    sendSignaling('screen_meta_update', {
+      tracks: trackMeta,
+      streams: streamMeta,
+      targetId: viewerId,
+    });
+  }
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  const midMeta: Array<{ mid: string; screenId: ScreenId }> = [];
+  pc.getTransceivers().forEach((t) => {
+    const track = t.sender?.track;
+    if (!track || !t.mid) return;
+    const screenId = trackToScreen.get(track.id);
+    if (screenId) {
+      midMeta.push({ mid: String(t.mid), screenId });
+    }
+  });
+
+  sendSignaling('offer', { offer, targetId: viewerId, mids: midMeta });
 }
 
-async function handleWebRTCAnswer(payload: any) {
-  if (!state.peerConnection || !payload?.answer) return;
+async function handleWebRTCOffer(payload: any, presenterId: string) {
+  // Viewer: receive offer, create answer
+  if (state.role !== 'viewer' || !payload?.offer) return;
+
+  if (state.peerConnection) {
+    state.peerConnection.close();
+  }
+
+  state.peerConnection = new RTCPeerConnection({
+    iceServers: ICE_SERVERS,
+  });
+  state.viewerPeerTargetId = presenterId;
+  state.viewerTrackMap.clear();
+  state.viewerTrackStreams.clear();
+  state.viewerStreamMap.clear();
+  state.viewerStreamById.clear();
+  state.viewerScreenStreams.clear();
+  state.viewerMidMap.clear();
+
+  if (payload?.tracks && Array.isArray(payload.tracks)) {
+    payload.tracks.forEach((t: any) => {
+      if (t?.trackId && t?.screenId) {
+        state.viewerTrackMap.set(t.trackId, t.screenId);
+      }
+    });
+  }
+  if (payload?.streams && Array.isArray(payload.streams)) {
+    payload.streams.forEach((s: any) => {
+      if (s?.streamId && s?.screenId) {
+        state.viewerStreamMap.set(s.streamId, s.screenId);
+      }
+    });
+  }
+  if (payload?.mids && Array.isArray(payload.mids)) {
+    payload.mids.forEach((m: any) => {
+      if (m?.mid && m?.screenId) {
+        state.viewerMidMap.set(String(m.mid), m.screenId);
+      }
+    });
+  }
+
+  state.peerConnection.ontrack = (event) => {
+    const track = event.track;
+    const stream = event.streams[0] ?? new MediaStream([track]);
+
+    if (stream?.id) {
+      state.viewerStreamById.set(stream.id, stream);
+      const mappedScreen = state.viewerStreamMap.get(stream.id);
+      if (mappedScreen) {
+        state.viewerScreenStreams.set(mappedScreen, stream);
+        if (!state.viewerActiveScreen) {
+          state.viewerActiveScreen = mappedScreen;
+        }
+      }
+    }
+
+    state.viewerTrackStreams.set(track.id, stream);
+
+    const mid = event.transceiver?.mid ? String(event.transceiver.mid) : null;
+    const midScreenId = mid ? state.viewerMidMap.get(mid) : undefined;
+    const screenId = midScreenId || state.viewerTrackMap.get(track.id);
+    if (screenId) {
+      state.viewerScreenStreams.set(screenId, stream);
+      if (!state.viewerActiveScreen) {
+        state.viewerActiveScreen = screenId;
+      }
+    }
+
+    updateViewerMainCanvas(state.viewerActiveScreen || screenId || null);
+  };
+
+  state.peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      sendSignaling('ice_candidate', {
+        candidate: event.candidate.toJSON(),
+        targetId: presenterId,
+      });
+    }
+  };
+
   await state.peerConnection.setRemoteDescription(
+    new RTCSessionDescription(payload.offer),
+  );
+  const answer = await state.peerConnection.createAnswer();
+  await state.peerConnection.setLocalDescription(answer);
+  sendSignaling('answer', { answer, targetId: presenterId });
+}
+
+async function handleWebRTCAnswer(payload: any, viewerId: string) {
+  if (state.role !== 'presenter' || !payload?.answer) return;
+  const pc = state.presenterPeers.get(viewerId);
+  if (!pc) return;
+  await pc.setRemoteDescription(
     new RTCSessionDescription(payload.answer),
   );
 }
 
-async function handleICECandidate(payload: any) {
-  if (!state.peerConnection || !payload?.candidate) return;
-  await state.peerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
+async function handleICECandidate(payload: any, senderId: string) {
+  if (!payload?.candidate) return;
+
+  if (state.role === 'presenter') {
+    const pc = state.presenterPeers.get(senderId);
+    if (!pc) return;
+    await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+    return;
+  }
+
+  if (state.peerConnection) {
+    await state.peerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -962,6 +1220,8 @@ function resetToLanding() {
   state.captures.forEach(stream => stream.getTracks().forEach(t => t.stop()));
   state.captures.clear();
   state.peerConnection?.close();
+  state.presenterPeers.forEach(pc => pc.close());
+  state.presenterPeers.clear();
   state.ws?.close();
 
   // Reset state
@@ -975,6 +1235,13 @@ function resetToLanding() {
   state.viewerCount = 0;
   state.ws = null;
   state.peerConnection = null;
+  state.viewerTrackMap.clear();
+  state.viewerTrackStreams.clear();
+  state.viewerStreamMap.clear();
+  state.viewerStreamById.clear();
+  state.viewerScreenStreams.clear();
+  state.viewerMidMap.clear();
+  state.viewerPeerTargetId = null;
 
   showView('landing');
 }

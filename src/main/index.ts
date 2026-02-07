@@ -73,6 +73,7 @@ function getDisplayBounds(): DisplayBounds[] {
   const displays = screen.getAllDisplays();
   return displays.map((display, index) => ({
     screenId: `screen_${index + 1}` as ScreenId,
+    displayId: String(display.id),
     x: display.bounds.x,
     y: display.bounds.y,
     width: display.bounds.width,
@@ -113,6 +114,13 @@ function setupIPC(): void {
   // Get cursor position (for intent engine polling)
   ipcMain.handle('get-cursor-position', () => {
     return getCursorPosition();
+  });
+
+  // Get cursor display id (more reliable than bounds mapping)
+  ipcMain.handle('get-cursor-display', () => {
+    const point = getCursorPosition();
+    const display = screen.getDisplayNearestPoint(point);
+    return String(display.id);
   });
 
   // Get focused window info

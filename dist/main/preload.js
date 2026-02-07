@@ -13,6 +13,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     getDisplays: () => electron_1.ipcRenderer.invoke('get-displays'),
     getDesktopSources: () => electron_1.ipcRenderer.invoke('get-desktop-sources'),
     getCursorPosition: () => electron_1.ipcRenderer.invoke('get-cursor-position'),
+    getCursorDisplay: () => electron_1.ipcRenderer.invoke('get-cursor-display'),
     getFocusedWindowDisplay: () => electron_1.ipcRenderer.invoke('get-focused-window-display'),
     checkScreenPermission: () => electron_1.ipcRenderer.invoke('check-screen-permission'),
     requestScreenPermission: () => electron_1.ipcRenderer.invoke('request-screen-permission'),

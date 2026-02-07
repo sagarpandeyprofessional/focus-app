@@ -14,6 +14,7 @@ declare global {
                 x: number;
                 y: number;
             }>;
+            getCursorDisplay: () => Promise<string>;
             getFocusedWindowDisplay: () => Promise<string | null>;
             checkScreenPermission: () => Promise<boolean>;
             requestScreenPermission: () => Promise<boolean>;
