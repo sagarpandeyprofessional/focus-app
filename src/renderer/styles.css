@@ -1,0 +1,941 @@
+/**
+ * @file    renderer/styles.css
+ * @purpose FOCUS application visual design system.
+ *          Dark, utilitarian, enterprise-grade.
+ * @owner   FOCUS Core Team
+ *
+ * Aesthetic: Industrial-utilitarian.
+ * Feels: Calm. Obvious. Predictable under stress. Boring in the best way.
+ * No gratuitous animation. No visual noise.
+ */
+
+/* ═══════════════════════════════════════════ */
+/* DESIGN TOKENS                               */
+/* ═══════════════════════════════════════════ */
+
+:root {
+  /* Surface */
+  --bg-base: #0a0a0f;
+  --bg-elevated: #12121a;
+  --bg-surface: #1a1a25;
+  --bg-surface-hover: #222230;
+  --bg-overlay: rgba(10, 10, 15, 0.85);
+
+  /* Text */
+  --text-primary: #e8e8ed;
+  --text-secondary: #8888a0;
+  --text-tertiary: #5a5a70;
+  --text-inverse: #0a0a0f;
+
+  /* Accent — muted cyan/teal for "focus" */
+  --accent: #3dd6c8;
+  --accent-dim: #2a9a90;
+  --accent-glow: rgba(61, 214, 200, 0.15);
+  --accent-glow-strong: rgba(61, 214, 200, 0.35);
+
+  /* Semantic */
+  --danger: #e05252;
+  --danger-hover: #c94444;
+  --warning: #e0a840;
+  --success: #4aba6a;
+
+  /* Border */
+  --border: #2a2a38;
+  --border-focus: var(--accent);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+
+  /* Typography */
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+
+  /* Timing */
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 400ms ease;
+
+  /* Focus transition delay per UX_Flows.md §5 */
+  --focus-switch-delay: 500ms;
+}
+
+/* ═══════════════════════════════════════════ */
+/* RESET & BASE                                */
+/* ═══════════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════ */
+/* TITLEBAR                                    */
+/* ═══════════════════════════════════════════ */
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  padding: 0 var(--space-md);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+  position: relative;
+  z-index: 100;
+}
+
+.titlebar-drag-region {
+  position: absolute;
+  inset: 0;
+  -webkit-app-region: drag;
+}
+
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 1;
+}
+
+.brand-icon {
+  font-size: 16px;
+  color: var(--accent);
+}
+
+.brand-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.titlebar-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 12px;
+  color: var(--text-secondary);
+  -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 1;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.status-dot.offline {
+  background: var(--text-tertiary);
+}
+
+.status-dot.connecting {
+  background: var(--warning);
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ═══════════════════════════════════════════ */
+/* APP & VIEWS                                 */
+/* ═══════════════════════════════════════════ */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.view {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+}
+
+.view.active {
+  display: flex;
+}
+
+/* ═══════════════════════════════════════════ */
+/* LANDING VIEW                                */
+/* ═══════════════════════════════════════════ */
+
+.landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: var(--space-xl);
+  padding: var(--space-xl);
+}
+
+.landing-hero {
+  text-align: center;
+}
+
+.hero-icon {
+  font-size: 48px;
+  color: var(--accent);
+  margin-bottom: var(--space-md);
+}
+
+.landing-hero h1 {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  margin-bottom: var(--space-xs);
+}
+
+.hero-subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.hero-description {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  width: 320px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.join-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.landing-footer {
+  margin-top: var(--space-lg);
+}
+
+.shortcut-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  justify-content: center;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* ═══════════════════════════════════════════ */
+/* BUTTONS & INPUTS                            */
+/* ═══════════════════════════════════════════ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-app-region: no-drag;
+  outline: none;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--text-inverse);
+  border-color: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-surface-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-hover);
+}
+
+.btn-large {
+  padding: 14px 32px;
+  font-size: 16px;
+  width: 100%;
+}
+
+.btn-small {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.btn-icon {
+  padding: 6px;
+  min-width: 32px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+}
+
+.btn-icon:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.btn-toggle {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-color: var(--border);
+  position: relative;
+  padding-left: 32px;
+}
+
+.btn-toggle .toggle-indicator {
+  position: absolute;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: background var(--transition-fast);
+}
+
+.btn-toggle.active {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.btn-toggle.active .toggle-indicator {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow-strong);
+}
+
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  border-color: var(--accent-dim);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ═══════════════════════════════════════════ */
+/* SCREEN SELECTION VIEW                       */
+/* ═══════════════════════════════════════════ */
+
+.screen-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: var(--space-xl);
+  gap: var(--space-lg);
+}
+
+.screen-select h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.screen-select .subtitle {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: calc(-1 * var(--space-sm));
+}
+
+.screen-grid {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.screen-card {
+  width: 280px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  background: var(--bg-surface);
+}
+
+.screen-card:hover {
+  border-color: var(--text-tertiary);
+}
+
+.screen-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.screen-card-thumbnail {
+  width: 100%;
+  height: 158px;
+  background: var(--bg-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.screen-card-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.screen-card-info {
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.screen-card-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.screen-card-resolution {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+.screen-select-actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+/* ═══════════════════════════════════════════ */
+/* PRESENTER VIEW                              */
+/* ═══════════════════════════════════════════ */
+
+.presenter-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.presenter-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  min-height: 48px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.control-group-center {
+  gap: var(--space-md);
+}
+
+.control-group-end {
+  gap: var(--space-md);
+}
+
+.session-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.session-info .label,
+.viewer-count .label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.session-id {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+  user-select: text;
+}
+
+.viewer-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.viewer-count .count {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.presenter-screens {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  overflow: hidden;
+}
+
+.screen-preview-grid {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+}
+
+.screen-preview {
+  position: relative;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  background: var(--bg-base);
+  cursor: pointer;
+}
+
+.screen-preview.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-glow), inset 0 0 20px var(--accent-glow);
+}
+
+.screen-preview video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.screen-preview-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-overlay);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+}
+
+.screen-preview-label .active-badge {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════ */
+/* FOCUS DEBUG PANEL                           */
+/* ═══════════════════════════════════════════ */
+
+.focus-debug {
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) var(--space-md);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.debug-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0;
+  padding: 0 var(--space-md) var(--space-sm);
+}
+
+.debug-body.collapsed {
+  display: none;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px var(--space-sm);
+}
+
+.debug-label {
+  color: var(--text-tertiary);
+}
+
+.debug-value {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════ */
+/* VIEWER VIEW                                 */
+/* ═══════════════════════════════════════════ */
+
+.viewer-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.viewer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
+  z-index: 10;
+}
+
+/* Mode indicator per UX_Flows.md §6 */
+.mode-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 13px;
+}
+
+.mode-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: background var(--transition-base);
+}
+
+.mode-indicator.auto-follow .mode-dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow-strong);
+}
+
+.mode-indicator.pinned .mode-dot {
+  background: var(--warning);
+}
+
+/* Focus tooltip per UX_Flows.md §6 */
+.focus-tooltip {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  transition: opacity var(--transition-base);
+}
+
+.focus-tooltip strong {
+  color: var(--accent);
+}
+
+/* Main canvas — focused screen */
+.viewer-main-canvas {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.viewer-main-canvas video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Active screen border glow per UX_Flows.md §6 */
+.focus-border-glow {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  transition: border-color var(--focus-switch-delay),
+              box-shadow var(--focus-switch-delay);
+}
+
+.focus-border-glow.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 30px var(--accent-glow);
+}
+
+/* PiP — previous context per UX_Flows.md §5 */
+.viewer-pip {
+  position: absolute;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  width: 240px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+  animation: pip-fade-in 300ms ease;
+}
+
+.viewer-pip video {
+  width: 100%;
+  display: block;
+}
+
+.pip-label {
+  position: absolute;
+  top: var(--space-xs);
+  left: var(--space-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+@keyframes pip-fade-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Screen map — mini thumbnails per UX_Flows.md §6 */
+.viewer-screen-map {
+  position: absolute;
+  bottom: var(--space-md);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-sm);
+  z-index: 20;
+}
+
+.screen-map-item {
+  width: 80px;
+  height: 45px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--bg-surface);
+  opacity: 0.6;
+}
+
+.screen-map-item:hover {
+  opacity: 0.9;
+  border-color: var(--text-tertiary);
+}
+
+.screen-map-item.active {
+  border-color: var(--accent);
+  opacity: 1;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.screen-map-item.pinned {
+  border-color: var(--warning);
+}
+
+.screen-map-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════ */
+/* UTILITY                                     */
+/* ═══════════════════════════════════════════ */
+
+.hidden {
+  display: none !important;
+}
+
+/* Accessibility: motion reduction per UX_Flows.md §8 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  :root {
+    --focus-switch-delay: 0ms;
+  }
+}
+
+/* High contrast focus indicators per UX_Flows.md §8 */
+@media (prefers-contrast: high) {
+  :root {
+    --accent: #00ffd5;
+    --accent-glow: rgba(0, 255, 213, 0.3);
+    --border: #444466;
+  }
+
+  .focus-border-glow.active {
+    border-width: 3px;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-surface-hover);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
